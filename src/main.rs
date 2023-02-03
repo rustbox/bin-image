@@ -1,13 +1,19 @@
-use std::io::Write;
+use std::{
+    fs,
+    io::{self, Write},
+};
 
-fn main() {
-    // println!("Hello, world!");
-
+fn main() -> Result<(), io::Error> {
     let mut buffer: [u8; 256000] = [0; 256000];
     let width = 640;
     let height = 400;
 
-    let image = bmp::open("image.bmp").unwrap();
+    let mut reader = std::env::args()
+        .nth(1)
+        .map(|path| fs::File::open(path).map::<Box<dyn io::Read>, _>(|f| Box::new(f)))
+        .unwrap_or_else(|| Ok(Box::new(std::io::stdin())))?;
+
+    let image = bmp::from_reader(&mut reader).expect("couldn't read input file");
     for y in 0..height {
         for x in 0..width {
             let pixel = image.get_pixel(x, y);
@@ -20,7 +26,7 @@ fn main() {
         }
     }
 
-    let _ = std::io::stdout().write_all(&buffer);
+    std::io::stdout().write_all(&buffer)
 }
 
 fn byte_to_color3(color: u8) -> u8 {
@@ -38,7 +44,7 @@ fn color3_to_byte(color: u8) -> u8 {
         5 => 182,
         6 => 218,
         7 => 255,
-        _ => 0
+        _ => 0,
     }
 }
 
@@ -60,7 +66,7 @@ fn rgb_bytes_to_byte(rgb: (u8, u8, u8)) -> u8 {
     let r3 = byte_to_color3(r);
     let g3 = byte_to_color3(g);
     let b3 = byte_to_color3(b);
-    
+
     // Red is lowest 3, green is middle 3, blue is upper 3
     rgb3_to_byte(r3, g3, b3)
 }
